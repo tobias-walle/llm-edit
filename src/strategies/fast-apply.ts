@@ -36,6 +36,7 @@ ${original}
 \`\`\`
 `.trim(),
   apply: async ({ original, language, response }) => {
+    const applyStart = Date.now();
     const patch = extractCodeBlocks(response).at(-1) ?? response;
     const openai = getOpenAiClient();
     const model = "gpt-4.1-nano";
@@ -65,14 +66,18 @@ ${original}
     const result =
       extractCodeBlocks(fastApplyResponseContent).at(-1) ??
       fastApplyResponseContent;
+    const applyTimeMs = Date.now() - applyStart;
+    const applyTimeS = applyTimeMs / 1000;
+    const stats: any = { ...fastApplyResponse.usage };
+    if (fastApplyResponse.usage) {
+      stats.tokens_per_second =
+        fastApplyResponse.usage.total_tokens / applyTimeS;
+      stats.price = calculateUsagePrice(fastApplyResponse.usage, model);
+    }
+    stats.time = `${applyTimeS}s`;
     return {
       result,
-      stats: {
-        ...fastApplyResponse.usage,
-        price: fastApplyResponse.usage
-          ? calculateUsagePrice(fastApplyResponse.usage, model)
-          : undefined,
-      },
+      stats: stats,
     };
   },
 };

@@ -62,7 +62,7 @@ async function main() {
     input: prompt,
     stream: true,
   });
-  let responseUsage: ResponseUsage | undefined;
+  let responseStats: any | undefined;
   let response = "";
   console.log(chalk.grey("."));
   for await (const event of stream) {
@@ -70,23 +70,25 @@ async function main() {
       const delta = event.delta;
       response += delta;
     } else if (event.type === "response.completed") {
-      responseUsage = event.response.usage;
+      responseStats = event.response.usage;
     }
     const reponseLines = response.split("\n").length;
     clearLogLine();
     console.log(chalk.grey(".".repeat(1 + reponseLines)));
   }
   const responseTimeMs = Date.now() - reponseStart;
+  if (responseStats) {
+    responseStats.tokens_per_second =
+      responseStats.total_tokens / (responseTimeMs / 1000);
+  }
   clearLogLine();
   logWithHighlighting(response, "markdown");
 
   console.log(chalk.bold.cyan("\n\n=== Applying Strategy ==="));
-  const applyStart = Date.now();
   const { result: updated, stats: applyStats = {} } = await strategy.apply({
     ...templateOptions,
     response,
   });
-  const applyTimeMs = Date.now() - applyStart;
 
   const updatedFile = opts.out;
   await writeFile(updatedFile, updated, "utf8");
@@ -97,17 +99,16 @@ async function main() {
   console.log(chalk.bold.cyan("\n=== Stats ==="));
   console.log(chalk.magenta("\n--- Response ---"));
   logStats({
-    ...responseUsage,
-    price: responseUsage
-      ? calculateUsagePrice(responseUsage, opts.model)
+    ...responseStats,
+    price: responseStats
+      ? calculateUsagePrice(responseStats, opts.model)
       : undefined,
     time: `${responseTimeMs / 1000}s`,
   });
-  console.log(chalk.magenta("\n--- Apply ---"));
-  logStats({
-    ...applyStats,
-    time: `${applyTimeMs / 1000}s`,
-  });
+  if (applyStats) {
+    console.log(chalk.magenta("\n--- Apply ---"));
+    logStats(applyStats);
+  }
 }
 
 function logStats(stats: Record<string, unknown>) {
