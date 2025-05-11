@@ -1,14 +1,20 @@
+#!/usr/bin/env node
 import { Command } from "commander";
 import { readFile, writeFile } from "fs/promises";
 import chalk from "chalk";
 import OpenAI from "openai";
 import * as dotenv from "dotenv";
-import { strategies } from "./strategies/index.js";
-import { StrategyName, TemplateOptions } from "./types.js";
+import { strategies } from "./strategies/index.ts";
+import type { StrategyName, TemplateOptions } from "./types.ts";
 import { execSync } from "child_process";
 import { inspect } from "util";
 
-dotenv.config();
+process.removeAllListeners("warning");
+
+main().catch((err) => {
+  console.error(chalk.red("Error:"), err);
+  process.exit(1);
+});
 
 export type Args = {
   prompt: string;
@@ -17,14 +23,15 @@ export type Args = {
   strategy: StrategyName;
 };
 
-// ----- Main -----
 async function main() {
+  dotenv.config();
+
   const prog = new Command();
   prog
-    .requiredOption("--prompt <p>", "Edit instruction")
-    .requiredOption("--file <f>", "Path to file")
-    .requiredOption("--out <f>", "Path to output file")
-    .option("--strategy <s>", "Update strategy", "naive")
+    .requiredOption("-p, --prompt <p>", "Edit instruction")
+    .requiredOption("-f, --file <f>", "Path to file")
+    .requiredOption("-o, --out <f>", "Path to output file")
+    .option("-s, --strategy <s>", "Update strategy", "naive")
     .parse(process.argv);
   const opts = prog.opts<Args>();
 
@@ -34,6 +41,7 @@ async function main() {
     file: opts.file,
     original,
     instruction: opts.prompt,
+    language: opts.file.split(".").at(-1) ?? "text",
   };
   const prompt = strategy.template(templateOptions);
 
@@ -45,7 +53,7 @@ async function main() {
   console.log(chalk.bold.cyan("\n=== LLM Request ==="));
   logWithHighlighting(prompt, "markdown");
 
-  console.log(chalk.bold.cyan("\n=== LLM Response (streaming) ==="));
+  console.log(chalk.bold.cyan("\n=== LLM Response ==="));
 
   // Use streaming for the UI feedback
   const reponseStart = Date.now();
@@ -130,8 +138,3 @@ async function logDiff(file1: string, file2: string): Promise<void> {
     // ignore
   }
 }
-
-main().catch((err) => {
-  console.error(chalk.red("Error:"), err);
-  process.exit(1);
-});

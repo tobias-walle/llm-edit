@@ -6,5 +6,5 @@ for i in range(1, 101):
             print("Fizz")
         case (False, True):
             print("Buzz")
-        case (False, False):
+        case _:
             print(i)
