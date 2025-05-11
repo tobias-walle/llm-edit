@@ -18,7 +18,7 @@ Options:
 You can find the strategies under [./src/strategies/](./src/strategies/).
 
 - **naive** - Replace the content of the whole file.
-- **aider-diff** - Use search/replace blocks similar to Aider.
+- **aider-diff** - Use search/replace blocks similar to [Aider](https://aider.chat/).
 - **fast-apply** - Apply the changes with a small LLM like `4.1-nano`.
 
 If you are interested into the topic I can recommend the blog post of my colleague Fabian Hertwig [Code Surgery: How AI Assistants Make Precise Edits to Your Files](https://fabianhertwig.com/blog/coding-assistants-file-edits/).
