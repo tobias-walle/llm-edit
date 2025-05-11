@@ -29,6 +29,7 @@ async function main() {
 
   const prog = new Command();
   prog
+    .name("llm-edit")
     .requiredOption("-p, --prompt <p>", "Edit instruction")
     .requiredOption("-f, --file <f>", "Path to file")
     .requiredOption("-o, --out <f>", "Path to output file")
