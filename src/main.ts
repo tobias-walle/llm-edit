@@ -2,14 +2,14 @@
 import { Command } from "commander";
 import { readFile, writeFile } from "fs/promises";
 import chalk from "chalk";
-import OpenAI from "openai";
 import * as dotenv from "dotenv";
 import { strategies } from "./strategies/index.ts";
 import type { StrategyName, TemplateOptions } from "./types.ts";
 import { execSync } from "child_process";
 import { inspect } from "util";
-
-process.removeAllListeners("warning");
+import { getOpenAiClient } from "./utils/openai.ts";
+import type { ResponseUsage } from "openai/resources/responses/responses.mjs";
+import { calculateUsagePrice } from "./utils/costs.ts";
 
 main().catch((err) => {
   console.error(chalk.red("Error:"), err);
@@ -21,6 +21,7 @@ export type Args = {
   file: string;
   out: string;
   strategy: StrategyName;
+  model: string;
 };
 
 async function main() {
@@ -32,6 +33,7 @@ async function main() {
     .requiredOption("-f, --file <f>", "Path to file")
     .requiredOption("-o, --out <f>", "Path to output file")
     .option("-s, --strategy <s>", "Update strategy", "naive")
+    .option("-m, --model <m>", "Model to use", "gpt-4.1")
     .parse(process.argv);
   const opts = prog.opts<Args>();
 
@@ -45,10 +47,7 @@ async function main() {
   };
   const prompt = strategy.template(templateOptions);
 
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_BASE_URL,
-  });
+  const openai = getOpenAiClient();
 
   console.log(chalk.bold.cyan("\n=== LLM Request ==="));
   logWithHighlighting(prompt, "markdown");
@@ -58,11 +57,11 @@ async function main() {
   // Use streaming for the UI feedback
   const reponseStart = Date.now();
   const stream = openai.responses.stream({
-    model: "gpt-4.1",
+    model: opts.model,
     input: prompt,
     stream: true,
   });
-  let responseUsage;
+  let responseUsage: ResponseUsage | undefined;
   let response = "";
   console.log(chalk.grey("."));
   for await (const event of stream) {
@@ -79,25 +78,35 @@ async function main() {
   const responseTimeMs = Date.now() - reponseStart;
   clearLogLine();
   logWithHighlighting(response, "markdown");
-  logStats({
-    time: `${responseTimeMs / 1000}s`,
-    ...responseUsage,
-  });
 
   console.log(chalk.bold.cyan("\n\n=== Applying Strategy ==="));
   const applyStart = Date.now();
-  const updated = await strategy.apply({
+  const { result: updated, stats: applyStats = {} } = await strategy.apply({
     ...templateOptions,
     response,
   });
   const applyTimeMs = Date.now() - applyStart;
-  logStats({ time: `${applyTimeMs}s` });
 
   const updatedFile = opts.out;
   await writeFile(updatedFile, updated, "utf8");
 
   console.log(chalk.bold.cyan("\n=== Diff ==="));
   logDiff(opts.file, updatedFile);
+
+  console.log(chalk.bold.cyan("\n=== Stats ==="));
+  console.log(chalk.magenta("\n--- Response ---"));
+  logStats({
+    ...responseUsage,
+    price: responseUsage
+      ? calculateUsagePrice(responseUsage, opts.model)
+      : undefined,
+    time: `${responseTimeMs / 1000}s`,
+  });
+  console.log(chalk.magenta("\n--- Apply ---"));
+  logStats({
+    ...applyStats,
+    time: `${applyTimeMs / 1000}s`,
+  });
 }
 
 function logStats(stats: Record<string, unknown>) {

@@ -51,7 +51,7 @@ ${original}
         result = result.replaceAll(patch.original, patch.updated);
       }
     }
-    return result;
+    return { result };
   },
 };
 

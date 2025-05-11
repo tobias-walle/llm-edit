@@ -16,6 +16,8 @@ ${original}
 \`\`\`
 `.trim(),
   apply: async ({ response }) => {
-    return extractCodeBlocks(response).at(-1) ?? response;
+    return {
+      result: extractCodeBlocks(response).at(-1) ?? response,
+    };
   },
 };
