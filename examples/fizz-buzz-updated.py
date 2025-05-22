@@ -1,9 +1,10 @@
-for i in range(1, 1001):
-    if i % 3 == 0 and i % 5 == 0:
-        print("FizzBuzz")
-    elif i % 3 == 0:
-        print("Fizz")
-    elif i % 5 == 0:
-        print("Buzz")
-    else:
-        print(i)
+for i in range(1, 101):
+    match (i % 3 == 0, i % 5 == 0):
+        case (True, True):
+            print("FizzBuzz")
+        case (True, False):
+            print("Fizz")
+        case (False, True):
+            print("Buzz")
+        case _:
+            print(i)

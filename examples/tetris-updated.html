@@ -11,52 +11,28 @@
         justify-content: center;
         align-items: center;
         height: 100vh;
-        background: linear-gradient(135deg, #232526 0%, #414345 100%);
-        overflow: hidden;
+        background: #222;
+        /* Greyscale background */
         margin: 0;
         font-family: Arial, sans-serif;
-        color: white;
+        color: #e0e0e0;
       }
 
       #scoreContainer {
         text-align: center;
-        font-size: 2em;
-        margin-bottom: 20px;
-        padding: 10px 30px;
-        border-radius: 12px;
-        background: rgba(20, 20, 50, 0.5);
-        backdrop-filter: blur(5px);
-        box-shadow: 0 2px 20px 0 #0ff9, 0 2px 10px 0 #f0f, 0 1px 20px 0 #fff4;
-        text-shadow: 0 4px 16px #00e6ffb4, 0 2px 8px #ff4ddb70;
-        border: 2px solid #65f7ffd0;
-        transition: box-shadow 0.4s;
-      }
-
-      #scoreContainer:hover {
-        box-shadow: 0 1px 40px 0 #0ff, 0 2px 30px 0 #f0f, 0 1px 30px 0 #fff, 0 0 0 #0000;
+        font-size: 1.5em;
+        margin-bottom: 10px;
       }
 
       canvas {
-        background: #101824;
+        background: #111;
         display: block;
-        border-radius: 16px;
-        box-shadow: 0 0 70px 8px #2dfdff55, 0 0 3px 1px #fff6, 0 8px 32px #9100ff51;
-        transition: box-shadow 0.6s;
-        position: relative;
-        z-index: 9;
-        animation: glow 2.6s infinite alternate;
-      }
-
-      @keyframes glow {
-        from {
-          box-shadow: 0 0 30px 8px #7cfff355, 0 0 3px 1px #fff6, 0 8px 32px #a799ff31;
-        }
-        to {
-          box-shadow: 0 0 90px 14px #23e3ffaa, 0 0 8px 2px #fff, 0 8px 52px #d900ff55;
-        }
+        box-shadow: 0 0 20px rgba(30,30,30,0.5);
+        /* Add shadow for depth */
       }
     </style>
   </head>
+
   <body>
     <div id="scoreContainer">Score: <span id="score">0</span></div>
     <canvas id="tetris" width="240" height="400"></canvas>
@@ -65,131 +41,6 @@
       const context = canvas.getContext("2d");
       context.scale(20, 20);
 
-      // FANCY EFFECT: Add shadow and gradient overlay to tetromino tiles
-      function drawMatrix(matrix, offset) {
-        matrix.forEach((row, y) => {
-          row.forEach((value, x) => {
-            if (value !== 0) {
-              // Shadow under the tile for depth
-              context.save();
-              context.shadowColor = "#fff";
-              context.shadowBlur = 15;
-              context.shadowOffsetX = 0.05;
-              context.shadowOffsetY = 0.05;
-              // Gradient fill for each block
-              let grad = context.createLinearGradient(
-                x + offset.x, y + offset.y,
-                x + offset.x + 1, y + offset.y + 1
-              );
-              grad.addColorStop(0, lighten(colors[value], 0.38));
-              grad.addColorStop(0.4, colors[value]);
-              grad.addColorStop(1, darken(colors[value], 0.22));
-
-              context.fillStyle = grad;
-              context.fillRect(x + offset.x, y + offset.y, 1, 1);
-
-              // Draw 'border' for each tile
-              context.lineWidth = 0.08;
-              context.strokeStyle = "#fff9";
-              context.strokeRect(x + offset.x+0.04, y + offset.y+0.04, 0.92, 0.92);
-
-              context.restore();
-            }
-          });
-        });
-      }
-      // Utils for effects
-      function lighten(col, amt) {
-        let c = parseInt(col.slice(1), 16);
-        let r = ((c >> 16) + 255 * amt) / (1 + amt);
-        let g = (((c >> 8) & 255) + 255 * amt) / (1 + amt);
-        let b = ((c & 255) + 255 * amt) / (1 + amt);
-        return `rgb(${r|0}, ${g|0}, ${b|0})`;
-      }
-      function darken(col, amt) {
-        let c = parseInt(col.slice(1), 16);
-        let r = ((c >> 16) * (1-amt));
-        let g = (((c >> 8) & 255) * (1-amt));
-        let b = ((c & 255) * (1-amt));
-        return `rgb(${r|0}, ${g|0}, ${b|0})`;
-      }
-      // … Unchanged …
-      function draw() {
-        // Animated background effect
-        let t = performance.now() * 0.00032;
-        let grad= context.createLinearGradient(0, 0, 12, 20);
-        grad.addColorStop(0, `hsl(${(t*120)%360},72%,25%)`);
-        grad.addColorStop(1, `hsl(${(t*220+150)%360},86%,17%)`);
-        context.fillStyle = grad;
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        drawMatrix(arena, { x: 0, y: 0 });
-        drawMatrix(player.matrix, player.pos);
-        updateParticles();
-      }
-      // … Unchanged …
-
-      const colors = [
-        null,
-        "#FF0D72",
-        "#0DC2FF",
-        "#0DFF72",
-        "#F538FF",
-        "#FF8E0D",
-        "#FFE138",
-        "#3877FF",
-      ];
-
-      // Particle explosion on line clear
-      function spawnParticles(y) {
-        const num = 24;
-        for(let i=0;i<num;i++){
-          createParticle(
-            (Math.random() * 12),
-            y + Math.random()*0.3,
-            1.5*Math.cos(i/num*Math.PI*2),
-            -2*Math.abs(Math.sin(i/num*Math.PI*2)+Math.random()*0.7),
-            colors[1 + (Math.random()*6)|0]
-          );
-        }
-      }
-      let particles = [];
-      function createParticle(x, y, vx, vy, color) {
-        particles.push({x, y, vx, vy, color, life: 50+Math.random()*20});
-      }
-      // Draw & update particles
-      function updateParticles() {
-        for (let i=particles.length-1; i>=0; --i){
-          let p = particles[i];
-          p.x += p.vx*0.09;
-          p.y += p.vy*0.09+0.03;
-          p.vy += 0.08;
-          p.life--;
-          context.save();
-          context.globalAlpha = Math.max(0, Math.min(1, p.life/50));
-          context.beginPath();
-          context.arc(p.x, p.y, 0.18, 0, Math.PI*2, 1);
-          context.fillStyle = p.color;
-          context.shadowColor = p.color;
-          context.shadowBlur = 8;
-          context.fill();
-          context.restore();
-          if (p.life<=0) particles.splice(i,1);
-        }
-      }
-      // call in draw()
-      function draw() {
-        // Animated background effect
-        let t = performance.now() * 0.00032;
-        let grad = context.createLinearGradient(0, 0, 12, 20);
-        grad.addColorStop(0, `hsl(${(t*120)%360},72%,25%)`);
-        grad.addColorStop(1, `hsl(${(t*220+150)%360},86%,17%)`);
-        context.fillStyle = grad;
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        drawMatrix(arena, { x: 0, y: 0 });
-        drawMatrix(player.matrix, player.pos);
-        updateParticles();
-      }
-      // modify arenaSweep for sparkles
       function arenaSweep() {
         let rowCount = 1;
         outer: for (let y = arena.length - 1; y > 0; --y) {
@@ -198,16 +49,230 @@
               continue outer;
             }
           }
+
           const row = arena.splice(y, 1).fill(0);
           arena.unshift(row);
           ++y;
-          // FANCY: spawn sparkles on row clear
-          spawnParticles(y);
+
           player.score += rowCount * 10;
           rowCount *= 2;
         }
       }
-      // … Unchanged …
+
+      function collide(arena, player) {
+        const [m, o] = [player.matrix, player.pos];
+        for (let y = 0; y < m.length; ++y) {
+          for (let x = 0; x < m[y].length; ++x) {
+            if (
+              m[y][x] !== 0 &&
+              (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0
+            ) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function createMatrix(w, h) {
+        const matrix = [];
+        while (h--) {
+          matrix.push(new Array(w).fill(0));
+        }
+        return matrix;
+      }
+
+      function createPiece(type) {
+        if (type === "T") {
+          return [
+            [0, 0, 0],
+            [1, 1, 1],
+            [0, 1, 0],
+          ];
+        } else if (type === "O") {
+          return [
+            [2, 2],
+            [2, 2],
+          ];
+        } else if (type === "L") {
+          return [
+            [0, 3, 0],
+            [0, 3, 0],
+            [0, 3, 3],
+          ];
+        } else if (type === "J") {
+          return [
+            [0, 4, 0],
+            [0, 4, 0],
+            [4, 4, 0],
+          ];
+        } else if (type === "I") {
+          return [
+            [0, 5, 0, 0],
+            [0, 5, 0, 0],
+            [0, 5, 0, 0],
+            [0, 5, 0, 0],
+          ];
+        } else if (type === "S") {
+          return [
+            [0, 6, 6],
+            [6, 6, 0],
+            [0, 0, 0],
+          ];
+        } else if (type === "Z") {
+          return [
+            [7, 7, 0],
+            [0, 7, 7],
+            [0, 0, 0],
+          ];
+        }
+      }
+
+      function drawMatrix(matrix, offset) {
+        matrix.forEach((row, y) => {
+          row.forEach((value, x) => {
+            if (value !== 0) {
+              context.fillStyle = colors[value];
+              context.fillRect(x + offset.x, y + offset.y, 1, 1);
+            }
+          });
+        });
+      }
+
+      function draw() {
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawMatrix(arena, { x: 0, y: 0 });
+        drawMatrix(player.matrix, player.pos);
+      }
+
+      function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+          row.forEach((value, x) => {
+            if (value !== 0) {
+              arena[y + player.pos.y][x + player.pos.x] = value;
+            }
+          });
+        });
+      }
+
+      function playerDrop() {
+        player.pos.y++;
+        if (collide(arena, player)) {
+          player.pos.y--;
+          merge(arena, player);
+          playerReset();
+          arenaSweep();
+          updateScore();
+        }
+        dropCounter = 0;
+      }
+
+      function playerMove(dir) {
+        player.pos.x += dir;
+        if (collide(arena, player)) {
+          player.pos.x -= dir;
+        }
+      }
+
+      function playerReset() {
+        const pieces = "TJLOSZI";
+        player.matrix = createPiece(
+          pieces[(pieces.length * Math.random()) | 0],
+        );
+        player.pos.y = 0;
+        player.pos.x =
+          ((arena.length / 2) | 0) - ((player.matrix.length / 2) | 0);
+        if (collide(arena, player)) {
+          arena.forEach((row) => row.fill(0));
+          player.score = 0;
+          updateScore();
+        }
+      }
+
+      function playerRotate(dir) {
+        const pos = player.pos.x;
+        let offset = 1;
+        rotate(player.matrix, dir);
+        while (collide(arena, player)) {
+          player.pos.x += offset;
+          offset = -(offset + (offset > 0 ? 1 : -1));
+          if (offset > player.matrix.length) {
+            rotate(player.matrix, -dir);
+            player.pos.x = pos;
+            return;
+          }
+        }
+      }
+
+      function rotate(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y) {
+          for (let x = 0; x < y; ++x) {
+            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+          }
+        }
+        if (dir > 0) {
+          matrix.forEach((row) => row.reverse());
+        } else {
+          matrix.reverse();
+        }
+      }
+
+      let dropCounter = 0;
+      let dropInterval = 1000;
+      let lastTime = 0;
+
+      function update(time = 0) {
+        const deltaTime = time - lastTime;
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) {
+          playerDrop();
+        }
+        lastTime = time;
+        draw();
+        requestAnimationFrame(update);
+      }
+
+      function updateScore() {
+        document.getElementById("score").innerText = player.score;
+      }
+
+      const colors = [
+        null,
+        "#d1d1d1", // Light grey
+        "#a0a0a0", // Medium-light grey
+        "#7c7c7c", // Medium grey
+        "#585858", // Medium-dark grey
+        "#bdbdbd", // Silver
+        "#444",    // Dark grey
+        "#ececec", // Very light grey
+      ];
+
+      const arena = createMatrix(12, 20);
+
+      const player = {
+        pos: { x: 0, y: 0 },
+        matrix: null,
+        score: 0,
+      };
+
+      playerReset();
+      update();
+
+      window.addEventListener("keydown", (event) => {
+        if (event.keyCode === 37) {
+          playerMove(-1);
+        } else if (event.keyCode === 39) {
+          playerMove(1);
+        } else if (event.keyCode === 40) {
+          playerDrop();
+        } else if (event.keyCode === 81) {
+          playerRotate(-1);
+        } else if (event.keyCode === 87) {
+          playerRotate(1);
+        }
+      });
     </script>
   </body>
 </html>

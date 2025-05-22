@@ -3,6 +3,7 @@ export type TemplateOptions = {
   instruction: string;
   original: string;
   language: string;
+  screenshot: boolean;
 };
 
 export type ApplyOptions = TemplateOptions & {

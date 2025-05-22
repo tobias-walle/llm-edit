@@ -1,5 +1,7 @@
+import path from "node:path";
 import type { Strategy } from "../types.ts";
 import { extractCodeBlocks } from "../utils/markdown.ts";
+import { generateScreenshotFromCodeSnippet } from "../utils/screenshots.ts";
 
 export const aiderDiffStrategy: Strategy = {
   name: "aider-diff",
@@ -44,12 +46,21 @@ File content:
 ${original}
 \`\`\`
 `.trim(),
-  apply: async ({ original, response }) => {
+  apply: async ({ file, original, response, screenshot }) => {
     let result = original;
-    for (const block of extractCodeBlocks(response)) {
+    const blocks = extractCodeBlocks(response);
+    for (const block of blocks) {
       for (const patch of parseDiff(block)) {
         result = result.replaceAll(patch.original, patch.updated);
       }
+    }
+    if (screenshot) {
+      const filename = path.basename(file);
+      await generateScreenshotFromCodeSnippet(
+        blocks.join("\n\n"),
+        `aider-diff-${filename}`,
+        { linenumbers: false },
+      );
     }
     return { result };
   },

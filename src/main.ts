@@ -8,8 +8,8 @@ import type { StrategyName, TemplateOptions } from "./types.ts";
 import { execSync } from "child_process";
 import { inspect } from "util";
 import { getOpenAiClient } from "./utils/openai.ts";
-import type { ResponseUsage } from "openai/resources/responses/responses.mjs";
 import { calculateUsagePrice } from "./utils/costs.ts";
+import { generateScreenshot } from "./utils/screenshots.ts";
 
 main().catch((err) => {
   console.error(chalk.red("Error:"), err);
@@ -22,6 +22,7 @@ export type Args = {
   out: string;
   strategy: StrategyName;
   model: string;
+  screenshot?: boolean;
 };
 
 async function main() {
@@ -35,6 +36,7 @@ async function main() {
     .requiredOption("-o, --out <f>", "Path to output file")
     .option("-s, --strategy <s>", "Update strategy", "naive")
     .option("-m, --model <m>", "Model to use", "gpt-4.1")
+    .option("--screenshot, -S", "Generate a screenshots the files")
     .parse(process.argv);
   const opts = prog.opts<Args>();
 
@@ -45,6 +47,7 @@ async function main() {
     original,
     instruction: opts.prompt,
     language: opts.file.split(".").at(-1) ?? "text",
+    screenshot: opts.screenshot ?? false,
   };
   const prompt = strategy.template(templateOptions);
 
@@ -92,6 +95,11 @@ async function main() {
 
   const updatedFile = opts.out;
   await writeFile(updatedFile, updated, "utf8");
+
+  if (opts.screenshot) {
+    await generateScreenshot(opts.file);
+    await generateScreenshot(updatedFile);
+  }
 
   console.log(chalk.bold.cyan("\n=== Diff ==="));
   logDiff(opts.file, updatedFile);

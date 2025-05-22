@@ -1,7 +1,9 @@
+import path from "node:path";
 import type { Strategy } from "../types.ts";
 import { calculateUsagePrice } from "../utils/costs.ts";
 import { extractCodeBlocks } from "../utils/markdown.ts";
 import { getOpenAiClient } from "../utils/openai.ts";
+import { generateScreenshotFromCodeSnippet } from "../utils/screenshots.ts";
 
 export const fastApplyStrategy: Strategy = {
   name: "fast-apply",
@@ -35,7 +37,7 @@ File content:
 ${original}
 \`\`\`
 `.trim(),
-  apply: async ({ original, language, response }) => {
+  apply: async ({ file, original, language, response, screenshot }) => {
     const applyStart = Date.now();
     const patch = extractCodeBlocks(response).at(-1) ?? response;
     const openai = getOpenAiClient();
@@ -75,6 +77,12 @@ ${original}
       stats.price = calculateUsagePrice(fastApplyResponse.usage, model);
     }
     stats.time = `${applyTimeS}s`;
+    if (screenshot) {
+      const filename = path.basename(file);
+      await generateScreenshotFromCodeSnippet(patch, `fast-apply-${filename}`, {
+        linenumbers: false,
+      });
+    }
     return {
       result,
       stats: stats,
